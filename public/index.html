@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Jogo de Nave do Pals</title>
+  <style>canvas { background: black; display: block; margin: auto; }</style>
+</head>
+<body>
+  <input id="nickname" placeholder="Seu nick" />
+  <button onclick="start()">Entrar</button>
+  <canvas id="game" width="800" height="600"></canvas>
+
+  <script>
+    let socket, nickname, playerId;
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    let players = [];
+    let bullets = [];
+
+    function start() {
+      nickname = document.getElementById('nickname').value;
+      socket = new WebSocket(`ws://${location.host}`);
+      socket.onopen = () => {
+        socket.send(JSON.stringify({ type: 'join', nickname }));
+      };
+
+      socket.onmessage = msg => {
+        const data = JSON.parse(msg.data);
+        if (data.type === 'state') {
+          players = data.players;
+          bullets = data.bullets || [];
+        }
+      };
+
+      document.addEventListener('keydown', movePlayer);
+      document.addEventListener('keydown', shoot);
+      setInterval(render, 50);
+    }
+
+    function movePlayer(e) {
+      let dx = 0, dy = 0, angle = 0;
+      if (e.key === 'ArrowUp') dy = -5;
+      if (e.key === 'ArrowDown') dy = 5;
+      if (e.key === 'ArrowLeft') dx = -5;
+      if (e.key === 'ArrowRight') dx = 5;
+      if (dx !== 0 || dy !== 0) {
+        angle = Math.atan2(dy, dx);
+        socket.send(JSON.stringify({ type: 'move', dx, dy, angle }));
+      }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Desenha tiros
+      for (const b of bullets) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = b.color || 'white';
+        ctx.fill();
+        ctx.restore();
+      }
+      // Desenha jogadores
+      for (const p of players) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+        ctx.fillStyle = p.color || 'white';
+        ctx.beginPath();
+        ctx.moveTo(10, 0);
+        ctx.lineTo(-10, 5);
+        ctx.lineTo(-10, -5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = 'yellow';
+        ctx.fillText(p.nickname, p.x - 20, p.y - 15);
+      }
+    }
+
+    function shoot(e) {
+      if (e.code === 'Space') {
+        socket.send(JSON.stringify({ type: 'shoot' }));
+      }
+    }
+  </script>
+</body>
+</html>
