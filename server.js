@@ -105,7 +105,7 @@ setInterval(() => {
 
 app.use(express.static('public'));
 
-server.listen(3000, '0.0.0.0', () => {
-  console.log('Servidor rodando em http://localhost:3000');
-  console.log('Acesse pelo IP local desta máquina na rede para jogar de outros PCs.');
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
